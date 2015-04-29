@@ -1,0 +1,1 @@
+{"name":"com.yobny.touch.hashlock","version":"0.0.1","title":"HashLock","hooks":{"cordova":{"desktop":"cordova.desktop","apparmor":"apparmor.json"}},"framework":"ubuntu-sdk-13.10","maintainer":"Apache Cordova Team <dev@cordova.apache.org>","architecture":"i386","description":"A sample Apache Cordova application that responds to the deviceready event."}

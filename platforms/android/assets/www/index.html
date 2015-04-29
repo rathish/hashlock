@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="msapplication-tap-highlight" content="no" />
+		  <meta name="viewport" content="width=device-width, initial-scale=1">
+  		  <link rel="stylesheet" type="text/css" href="css/themes/hashlock.min.css" />
+		  <link rel="stylesheet" type="text/css" href="css/themes/jquery.mobile.icons.min.css" />
+ 		  <link rel="stylesheet" type="text/css" href="css/jquery.mobile.structure-1.4.5.min.css" /> 
+ 		  <link href="css/captionjs.css" type="text/css" rel="stylesheet"/>
+ 		  <script src="js/jquery-1.11.2.min.js"></script> 
+  		  <script src="js/jquery.mobile-1.4.5.min.js"></script> 
+  		  <script src="js/sha3.js" type="text/javascript"></script>
+  		  <script src="js/enc-base64-min.js"></script>
+  		  <script src="js/jquery.caption.js"></script>
+		  <script src="js/json2.js"></script>
+		  <script src="js/jstorage.js"></script>
+		  
+  		  <title>#Lock</title>
+			<script type="text/javascript">
+			
+				var userlist = [];
+			
+				$(window).load(function() {
+					$('#img.caption').captionjs({'force_dimensions': true,'debug_mode'      : true});
+				});
+				$(document).on("click", ".news-param", function(){ 
+					var parm = $(this).data('parm');
+					$("#site").val(parm);
+					
+					// Load the users from the cache 
+					//
+					list = $.jStorage.get("userlist", userlist);
+					
+					$('#acc').empty();
+					$.each(list, function(val, text) {
+						$('#acc').append(
+							$('<option></option>').val(val).html(text)
+						); 
+					});
+					$('#acc').find('option:first').attr("selected","selected");
+					
+					// check the auto selected user and site having length previously stored.
+					//
+					var acc = $("#acc").val();
+					var siteacc = parm + "_" + acc;
+					var providedlen = $.jStorage.get(siteacc, -1);
+					if (providedlen != -1) {
+						$("#Length").val(providedlen).prop('disabled', false).css("background-color","#FAFAFA");
+						$("#change").css("display", "block");
+					}else {
+						$("#Length").val(0).prop('disabled', false).css("background-color","white");
+						$("#change").css("display", "none");
+					}
+					
+					$("#generatedCode").html("");
+				});
+				$(document).ready(function() {
+					$("#useradd").click(function () {
+						$("#useraddition").toggle();
+					});
+					
+					// Create new user in the browser database.
+					//
+					$("#save").click(function () {
+						list = $.jStorage.get("userlist", userlist);
+						
+						// if the added user not present in the list
+						//
+						if (($.inArray($("#user").val(), list)) == -1) {
+							// Add the user into the list
+							//
+							list[list.length] = $("#user").val();
+							// Store the list into the browser cache
+							//
+							$.jStorage.set("userlist", list);
+							// Empty the current account combo 
+							//
+							$('#acc').empty();
+							// Add the new list into the combo
+							//
+							$.each(list, function(val, text) {
+								$('#acc').append(
+									$('<option></option>').val(val).html(text)
+								); 
+							});
+							// Make the first option selected
+							//
+							$('#acc').find('option:first').attr("selected","selected");
+							// set the operation status
+							//
+							$("#status").html("User added, select the user");
+							$("#user").val("");
+						} else {
+							// User already exist
+							//
+							$("#status").html("User already added, select the user");;
+						}						
+						
+					});
+					
+					$("#change").click(function() {
+						$("#Length").prop('disabled', false).css("background-color","white");
+						$("#change").css("display", "none");
+					});
+					
+					$("#acc").on("change", function () {
+						var optionSelected = $(this).find("option:selected");
+						var site = $("#site").val();
+						var acc =  optionSelected.text();
+						
+						var siteacc = site + "_" + acc;
+						var providedlen = $.jStorage.get(siteacc, -1);
+						if (providedlen != -1) {
+							$("#Length").val(providedlen).prop('disabled', true).css("background-color","#FAFAFA");
+							$("#change").css("display", "block");
+						} else {
+							$("#Length").val(0).prop('disabled', false).css("background-color","white");
+							$("#change").css("display", "none");
+						}
+					});
+					
+					// Generate the hash key based on the selected site , key and length
+					//
+					$("#generate").click(function () {
+					
+						$("#Length").prop('disabled', true).css("background-color","#FAFAFA");
+						$("#change").css("display", "block");
+							
+						// get the selected site name
+						//
+						var site = $("#site").val();
+						
+						// get the entered key word
+						//
+						var keyword = $("#key").val();	
+						
+						// get the selected account 
+						//
+						var optionSelected =$("#acc").find("option:selected");
+						var site = $("#site").val();
+						var acc =  optionSelected.text();
+					
+						// construct the key string
+						//
+						var parm = site + keyword + acc;
+						
+						// Encrypt using the SHA3 algorithm
+						//
+						var hash = CryptoJS.SHA3(parm, { outputLength: 224 });
+						var generatedHash = hash.toString(CryptoJS.enc.Base64);
+					
+						// split the generated hash based on the input
+						//
+						if ($("#Length").val() == 0) {
+							$("#generatedCode").html(generatedHash);
+						} else {
+							var subStr = site.length + generatedHash.substring(0, $("#Length").val()) + "!";
+							$("#generatedCode").html(subStr);
+						}
+						
+						// store the used length into cache for future usage
+						//
+						var siteacc = site + "_" + acc;
+						var providedlen = $.jStorage.get(siteacc, -1);
+						if (providedlen == -1) {
+							$.jStorage.set(siteacc, $("#Length").val());
+						} else {
+							if (providedlen != $("#Length").val()) {
+								$.jStorage.set(siteacc, $("#Length").val());
+							}
+						}
+						
+						$("#key").val("");
+						// copy the generated text into clipboard
+						//
+						var text = "Hello World!";
+						window.plugins.clipboard.copy(text);
+						alert(window.plugins.clipboard);
+					});
+				});
+				
+			</script>      
+    </head>
+    <body>
+    		
+    		<div data-role="page" data-theme="a">
+    			<div data-role="header" data-position="fixed" >
+					<h1>#Lock</h1>
+				</div>
+				
+				<div data-role="content">
+      		 	<ul data-role="listview" data-inset="true" data-divider-theme="a" data-split-theme="b">
+   					<li data-role="list-divider">Social Media</li>
+						<li>
+    						<div 	class="ui-grid-c" >
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="facebook" data-rel="dialog" data-transition="slideup"><img href="crypto.html" id="img.caption" src="img/social-media/png/72x72/facebook.png" style="width: 48px; height:48px;" alt="" data-caption="dropbox"  /><p style="">facebook</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="evernote" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/evernote.png" style="width: 48px; height:48px;" alt="" /><p>evernote</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="linkedin" data-rel="linkedin" data-transition="slideup"><img src="img/social-media/png/72x72/linkedin.png" style="width: 48px; height:48px;" alt="" /><p>linkedin</p></a></div>
+								<div class="ui-block-d"><a href="#cryptopage" class="news-param"  data-parm="skype" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/skype.png" style="width: 48px; height:48px;" data-caption="Evernote" alt="" /><p>skype</p></a></div>
+   								
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="pinterest" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/pinterest.png" style="width: 48px; height:48px;" alt="" /><p>pinterest</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="digg" data-rel="dialog" data-transition="slideup"><img  src="img/social-media/png/72x72/digg.png" style="width: 48px; height:48px;" alt="" /><p style="">digg</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="stumbleupon" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/stumbleupon.png" style="width: 48px; height:48px;" alt="" /><p>stumbleupon</p></a></div>
+								<div class="ui-block-d"><a href="#cryptopage" class="news-param"  data-parm="twitter" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/48x48/twitter.png" style="width: 48px; height:48px;" alt="" /><p>twitter</p></a></div>
+									
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="google" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/google.png" style="width: 48px; height:48px;" data-caption="google" alt="" /><p>google</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="apple" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/48x48/apple.png" data-caption="apple" alt="" /><p>apple</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="viber" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/viber.png" style="width: 48px; height:48px;" data-caption="Viber" alt="" /><p>Viber	</p></a></div>
+								<div class="ui-block-d"><a href="#cryptopage" class="news-param"  data-parm="whatsapp" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/whatsapp.png" style="width: 48px; height:48px;" data-caption="WhatsApp" alt="" /><p>WhatsApp	</p></a></div>							
+							
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="office" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/office.png" style="width: 48px; height:48px;" data-caption="office" alt="" /><p>Office</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="dropbox" data-rel="dialog" data-transition="slideup"><img src="img/social-media/png/72x72/dropbox.png" style="width: 48px; height:48px;" data-caption="dropbox" alt="" /><p>Dropbox</p></a></div>
+							</div>
+						</li>
+   					<li data-role="list-divider">Shopping</li>
+						<li>
+							<div class="ui-grid-c">
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="aliexpress"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/Aliexpress1.png" style="width: 48px; height:48px;" alt="" /><p>aliexpress</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="argos"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/argos.png" style="width: 48px; height:48px;" alt="" /><p>argos</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="bt"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/BT_logo.png" style="width: 48px; height:48px;" alt="" /><p>BT</p></a></div>
+								<div class="ui-block-d"><a href="#cryptopage" class="news-param"  data-parm="ebay"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/ebay.png" style="width: 48px; height:48px;" alt="" /><p>ebay</p></a></div>
+								
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="flipkart"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/flipkart.png" style="width: 48px; height:48px;" alt="" /><p>flipkart</p></a></div>
+								<div class="ui-block-b"><a href="#cryptopage" class="news-param"  data-parm="gumtree"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/gumtree.png" style="width: 48px; height:48px;" alt="" /><p>gumtree</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="snapdeal"  data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/snapdeal.png" style="width: 48px; height:48px;" alt="" /><p>snapdeal</p></a></div>
+								<div class="ui-block-d"><a href="#cryptopage" class="news-param"  data-parm="amazon" data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/social_amazon.png" style="width: 48px; height:48px;" alt="" /><p>amazon</p></a></div>
+								
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="tesco" data-rel="dialog" data-transition="slideup"><img src="img/online-shopping/tesco.png"  style="width: 48px; height:48px;" alt="" /><p>tesco</p></a></div>
+							</div>
+						</li>
+						<li data-role="list-divider">Financial</li>
+							
+						<li>
+							<div class="ui-grid-c">
+								<div class="ui-block-a"><a href="#cryptopage" class="news-param"  data-parm="sbi" data-rel="dialog" data-transition="slideup"><img src="img/financial/sbi.png" style="width: 48px; height:48px;" alt="" /><p>SBI</p></a></div>
+								<div class="ui-block-c"><a href="#cryptopage" class="news-param"  data-parm="indiapost" data-rel="dialog" data-transition="slideup"><img src="img/financial/indiapost.jpg" style="width: 48px; height:48px;" alt="" /><p>India Post</p></a></div>
+							</div>						
+						
+						</li>						
+						
+						<li data-role="list-divider">Personal</li>
+					</ul>
+				</div>
+				
+			</div>
+			
+			<div data-role="page" data-theme="a" id="cryptopage">
+    			<div data-role="header" data-position="fixed" >
+					<h1>#Lock</h1>
+				</div>
+				
+				<div data-role="content">
+					<form id="myForm" action="#" method="post">
+						<div data-role="fieldcontain">
+						<table width="100%">
+							<tr>
+								<td width="95%">
+									<select name="acc" id="acc" data-theme="a" data-form="ui-btn-up-a"></select>
+								</td>
+								<td width="5%">
+									<img id="useradd" name="useradd" src="img/plus.png" style="width: 28px; height:28px;"></img>
+								</td>
+							</tr>
+						</table>
+						</div>
+						<div data-role="fieldcontain" id="useraddition" name="useraddition" class="ui-hide-label" style="display: none; background-color: #FAFAFA;">
+						<table width="100%">
+							<tr>
+								<td width="95%">
+									<div data-role="fieldcontain" id="useraddition" name="useraddition" class="ui-hide-label">
+									<label for="user">User</label>
+									<input type="text" name="user" id="user" value="" placeholder="welcome to #lock !!" />
+									</div>
+								</td>
+								<td width="5%">
+									<img id="save" name="save" src="img/save.png" style="width: 28px; height:28px;"></img>
+								</td>
+							</tr>
+						</table>
+						<p id="status" style="font-size: 12px;"></p>
+						</div>
+						<div data-role="fieldcontain" class="ui-hide-label">
+							<label for="site">Site</label>
+							<input type="text" name="site" id="site" value="" placeholder="one another site..." disabled="true" />
+						</div>
+						
+						
+						
+						<div data-role="fieldcontain" class="ui-hide-label">
+							<label for="key">Keyword</label>
+							<input type="text" name="key" id="key" value="" placeholder="give me a strong key string " />
+						</div>
+								
+						<div data-role="fieldcontain" class="ui-hide-label">
+							<table width="100%">
+							<tr>
+								<td width="95%">
+									<div data-role="fieldcontain" id="useraddition" name="useraddition" class="ui-hide-label">
+										<label for="Length">len</label>
+										<input type="text" name="Length" id="Length" value="0" placeholder="do you want to restrict it to any length ? " />
+									</div>
+								</td>
+								<td width="5%">
+									<img id="change" name="change" src="img/change.png" style="width: 28px; height:28px; display:none;"></img>
+								</td>
+							</tr>
+							</table>
+						</div>
+						
+						<button type="button" data-icon="gear" id="generate" name="generate" data-theme="a" data-form="ui-btn-up-a">Generate</button>
+						
+						
+						<div data-theme="a" data-form="ui-body-a" class="ui-body ui-body-a ui-corner-all">
+							<p style="font-size: 12px; word-wrap: break-word; text-align: middle;" id="generatedCode" name="generatedCode">{{ generated # code}}</p>						
+						</div>
+						<button data-icon="star" id="copy" name="copy" data-theme="a" data-form="ui-btn-up-a">Copy</button>
+					</form> 				
+				
+				
+				
+				</div>
+			</div>
+			
+        <script type="text/javascript" src="cordova.js"></script>
+		  <script type="text/javascript" src="clipboard.js"></script>
+        <script type="text/javascript" src="js/index.js"></script>
+    </body>
+</html>
